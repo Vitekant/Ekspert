@@ -1,4 +1,4 @@
-﻿//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
 //|                                                 TickReporter.mq4 |
 //|                                                            Vitek |
 //|                                             https://www.mql5.com |
@@ -35,6 +35,11 @@ struct Indicators
    bool              candleUpRedCloud;
    bool              candleDownRedCloud;
    bool              candleDownGreenCloud;
+   
+   bool              candleUpGreenCloud_Up50;
+   bool              candleUpRedCloud_Up50;
+   bool              candleDownRedCloud_Down50;
+   bool              candleDownGreenCloud_Down50;
 
    bool              TSAboveKS;
    bool              KSAboveTS;
@@ -51,6 +56,11 @@ struct Indicators
       candleUpRedCloud=false;
       candleDownRedCloud=false;
       candleDownGreenCloud=false;
+      
+      candleUpGreenCloud_Up50=false;
+      candleUpRedCloud_Up50=false;
+      candleDownRedCloud_Down50=false;
+      candleDownGreenCloud_Down50=false;
 
       TSAboveKS=false;
       KSAboveTS=false;
@@ -65,20 +75,10 @@ struct Indicators
 //+------------------------------------------------------------------+
 //|   Trading functions                                              |
 //+------------------------------------------------------------------+
-void sell()
+void sell(double stoploss, double takeprofit)
   {
-   Print("Słaba tendencja spadkowa. Sprzedawaj!!! ",Time[1]);
    double price=Bid;
-
    Print("Ask=",Ask," Bid=",Bid);
-//double minstoplevel=MarketInfo(Symbol(),MODE_STOPLEVEL);
-//minstoplevel = MathMax(20, minstoplevel);
-//Print("Minimum Stop Level=",minstoplevel," points");
-//Print("Points", Point);
-   double stoploss=NormalizeDouble(Ask+60*Point,Digits);
-//double stoploss=NormalizeDouble(kijou_sen_current+30*Point,Digits); 
-   double takeprofit=NormalizeDouble(Bid-60*Point,Digits);
-//double takeprofit=NormalizeDouble(Bid-200*Point,Digits);
    Print("Price=",price," SL=",stoploss," TP=",takeprofit);
    int ticket=OrderSend(Symbol(),OP_SELL,1,price,3,stoploss,takeprofit,"Sell order",16384,0,clrGreen);
    if(ticket<0)
@@ -93,18 +93,10 @@ void sell()
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-void buy()
+void buy(double stoploss, double takeprofit)
   {
-   Print("Silna tendencja wzrostowa. Kupuj!!! ",Time[1]);
    double price=Ask;
    Print("Ask=",Ask," Bid=",Bid);
-//double minstoplevel=MarketInfo(Symbol(),MODE_STOPLEVEL);
-//minstoplevel = MathMax(20, minstoplevel);
-//Print("Minimum Stop Level=",minstoplevel," points");
-   double stoploss=NormalizeDouble(Bid-60*Point,Digits);
-//double stoploss=NormalizeDouble(kijou_sen_current-30*Point,Digits); 
-   double takeprofit=NormalizeDouble(Ask+60*Point,Digits);
-//double takeprofit=NormalizeDouble(Ask+200*Point,Digits);
    Print("Price=",price," SL=",stoploss," TP=",takeprofit);
    int ticket=OrderSend(Symbol(),OP_BUY,1,price,3,stoploss,takeprofit,"Buy order",16384,0,clrGreen);
    if(ticket<0)
@@ -182,14 +174,38 @@ Indicators calculateIndicators(ENUM_TIMEFRAMES period=PERIOD_M5)
       if(debug)Print("Swieca wyszła spadkowo z chmury wzrostowej. ",Time[1]);
        indicators.candleDownGreenCloud=true;
      }
+     
+   if(indicators.candleUpGreenCloud && (candle_close - senkou_spanA_current >= senkou_spanA_current - candle_open))
+     {
+      if(debug) Print("Swieca wyszła wzrostowo z chmury wzrostowej o ponad 50%. ",Time[1]);
+      indicators.candleUpGreenCloud_Up50=true;
+     }
 
-   if(tenkan_sen_current>kijou_sen_current)
+   if(indicators.candleUpRedCloud && (candle_close - senkou_spanB_current >= senkou_spanB_current - candle_open))
+     {
+      if(debug) Print("Swieca wyszła wzrostowo z chmury spadkowej o ponad 50%. ",Time[1]);
+      indicators.candleUpRedCloud_Up50=true;
+     }
+
+   if(indicators.candleDownRedCloud && (candle_open - senkou_spanA_current <= senkou_spanA_current - candle_close))
+     {
+      if(debug)Print("Swieca wyszła spadkowo z chmury spadkowej o ponad 50%. ",Time[1]);
+       indicators.candleDownRedCloud_Down50=true;
+     }
+
+   if(indicators.candleDownGreenCloud && (candle_open - senkou_spanB_current <= senkou_spanB_current - candle_close))
+     {
+      if(debug)Print("Swieca wyszła spadkowo z chmury wzrostowej o ponad 50%. ",Time[1]);
+       indicators.candleDownGreenCloud_Down50=true;
+     }
+
+   if((candle_open < tenkan_sen_current && candle_open < kijou_sen_current && candle_close > tenkan_sen_current && candle_close > kijou_sen_current) || tenkan_sen_current>kijou_sen_current)
      {
       if(debug) Print("Tenkan-Sen jest powyzej Kijou-Sen. Tendencja wzrostowa. ",Time[1]);
       indicators.TSAboveKS=true;
      }
 
-   if(tenkan_sen_current<kijou_sen_current)
+   if((candle_open > tenkan_sen_current && candle_open > kijou_sen_current && candle_close < tenkan_sen_current && candle_close < kijou_sen_current) || tenkan_sen_current<kijou_sen_current)
      {
       if(debug)Print("Tenkan-Sen jest ponizej Kijou-Sen. Tendencja spadkowa. ",Time[1]);
       indicators.KSAboveTS=true;
@@ -267,32 +283,52 @@ void OnTick()
         
       // Indykatory policzone dla M5
       Indicators inds = calculateIndicators(PERIOD_M5);
+      
+      //
+      double stoploss = 0;
+      double takeprofit = 0;
 
       // mechanizm kupowania dla silnej tendencji wzrostowej
-      if(inds.candleUpGreenCloud && inds.TSAboveKS && inds.CSAboveOthersInPast && inds.PriceAboveTS && inds.GreenCloundInTheFuture && true) // jeśli spełnione wszystkie warunki to kupuj
+      if(inds.candleUpGreenCloud && inds.candleUpGreenCloud_Up50 && inds.TSAboveKS && inds.CSAboveOthersInPast && inds.PriceAboveTS && inds.GreenCloundInTheFuture && false) // żeby wyłączyć kupowanie zmień 'true' na 'false' w tej lini
         {
-         buy();
+         Print("Silna tendencja wzrostowa. Kupuj!!! ",Time[1]);
+          
+         stoploss=NormalizeDouble(Bid-500*Point,Digits);
+         takeprofit=NormalizeDouble(Ask+1000*Point,Digits);
+         buy(stoploss, takeprofit);
         }
       //---------------------------------------------------
 
       // mechanizm sprzedawania dla silnej tendencji spadkowej
-      if(inds.candleDownRedCloud && inds.KSAboveTS && inds.CSBelowOthersInPast && inds.PriceBelowTS && inds.RedCloundInTheFuture && true) // żeby wyłączyć sprzedawanie zmien 'true' na 'false' w tej lini
+      if(inds.candleDownRedCloud && inds.candleDownRedCloud_Down50 && inds.KSAboveTS && inds.CSBelowOthersInPast && inds.PriceBelowTS && inds.RedCloundInTheFuture && true) // żeby wyłączyć sprzedawanie zmien 'true' na 'false' w tej lini
         {
-         sell();
+        Print("Silna tendencja spadkowa. Sprzedawaj!!! ",Time[1]);
+        
+        stoploss=NormalizeDouble(Ask+500*Point,Digits);
+        takeprofit=NormalizeDouble(Bid-1000*Point,Digits);
+        sell(stoploss, takeprofit);
         }
       //---------------------------------------------------
 
       // mechanizm kupowania dla słabej tendencji wzrostowej
-      if(inds.candleUpRedCloud && inds.TSAboveKS && inds.CSAboveOthersInPast && inds.PriceAboveTS && inds.GreenCloundInTheFuture && true) // żeby wyłączyć sprzedawanie zmien 'true' na 'false' w tej lini
+      if(inds.candleUpRedCloud && inds.candleUpRedCloud_Up50 && inds.TSAboveKS && inds.CSAboveOthersInPast && inds.PriceAboveTS && inds.GreenCloundInTheFuture && false) // żeby wyłączyć kupowanie zmień 'true' na 'false' w tej lini
         {
-         buy();
+         Print("Słaba tendencja wzrostowa. Kupuj!!! ",Time[1]);
+         
+         stoploss=NormalizeDouble(Bid-500*Point,Digits);
+         takeprofit=NormalizeDouble(Ask+1000*Point,Digits);
+         buy(stoploss, takeprofit);
         }
       //---------------------------------------------------
 
       // mechanizm sprzedawania dla słabej tendencji spadkowej
-      if(inds.candleDownGreenCloud && inds.KSAboveTS && inds.CSBelowOthersInPast && inds.PriceBelowTS && inds.RedCloundInTheFuture && true) // żeby wyłączyć sprzedawanie zmien 'true' na 'false' w tej lini
+      if(inds.candleDownGreenCloud && inds.candleDownGreenCloud_Down50 && inds.KSAboveTS && inds.CSBelowOthersInPast && inds.PriceBelowTS && inds.RedCloundInTheFuture && true) // żeby wyłączyć sprzedawanie zmien 'true' na 'false' w tej lini
         {
-         sell();
+         Print("Słaba tendencja spadkowa. Sprzedawaj!!! ",Time[1]);
+        
+         stoploss=NormalizeDouble(Ask+500*Point,Digits);
+         takeprofit=NormalizeDouble(Bid-1000*Point,Digits);
+         sell(stoploss, takeprofit);
         }
      }
   }
