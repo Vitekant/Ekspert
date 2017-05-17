@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Vitek"
 #property link      "https://www.mql5.com"
-#property version   "1.003"
+#property version   "1.004"
 #property strict
 
 const bool debug=false;
@@ -49,6 +49,9 @@ struct Indicators
    bool              PriceBelowTS;
    bool              GreenCloundInTheFuture;
    bool              RedCloundInTheFuture;
+   
+   bool              candleAboveKumo;
+   bool              candleBelowKumo;
 
    Indicators() 
      {
@@ -70,6 +73,9 @@ struct Indicators
       PriceBelowTS=false;
       GreenCloundInTheFuture=false;
       RedCloundInTheFuture=false; 
+      
+      candleAboveKumo=false;
+      candleBelowKumo=false;
      }
   };
 //+------------------------------------------------------------------+
@@ -111,12 +117,12 @@ void buy(double stoploss, double takeprofit)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-Indicators calculateIndicators(ENUM_TIMEFRAMES period=PERIOD_M5)
+Indicators calculateIndicators(ENUM_TIMEFRAMES period)
   {
    Indicators indicators();
 
-   double candle_open=Close[2]; // Hack, żeby poprawnie ustalić czy świeca opuściła chmurę.
-   double candle_close=Close[1];
+   double candle_open=iClose(NULL,period,2); // Hack, żeby poprawnie ustalić czy świeca opuściła chmurę.
+   double candle_close=iClose(NULL,period,1);
    double senkou_spanA_current = iIchimoku(NULL,period,TS_parameter,KS_parameter,SSB_parameter,MODE_SENKOUSPANA,1);
    double senkou_spanB_current = iIchimoku(NULL,period,TS_parameter,KS_parameter,SSB_parameter,MODE_SENKOUSPANB,1);
    CloudColor cloudColor=senkou_spanA_current>senkou_spanB_current ? green : red;
@@ -143,7 +149,7 @@ Indicators calculateIndicators(ENUM_TIMEFRAMES period=PERIOD_M5)
       Print("SSB current=",senkou_spanB_current);
 
       Print("Chikou Span from ",KS_parameter," periods ago=",chikou_span_past);
-      Print("Price from ",KS_parameter," periods ago=",Close[KS_parameter+1]);
+      Print("Price from ",KS_parameter," periods ago=",iClose(NULL,period,KS_parameter+1));
       Print("Tenkan-Sen from ",KS_parameter," periods ago=",tenkan_sen_past);
       Print("Kijou-Sen from ",KS_parameter," periods ago=",kijou_sen_past);
       Print("SSA from ",KS_parameter," periods ago=",senkou_spanA_past);
@@ -165,7 +171,7 @@ Indicators calculateIndicators(ENUM_TIMEFRAMES period=PERIOD_M5)
 
    if(candle_close<candle_open && candle_close<senkou_spanA_current && candle_open>senkou_spanA_current && cloudColor==red)
      {
-      if(debug)Print("Swieca wyszła spadkowo z chmury spadkowej. ",Time[1]);
+      if(debug)Print("Swieca wyszła spadkowo z chmury spadkowej. ",period,Time[1]);
        indicators.candleDownRedCloud=true;
      }
 
@@ -211,13 +217,13 @@ Indicators calculateIndicators(ENUM_TIMEFRAMES period=PERIOD_M5)
       indicators.KSAboveTS=true;
      }
 
-   if(chikou_span_past>senkou_spanA_past && chikou_span_past>senkou_spanB_past && chikou_span_past>kijou_sen_past && chikou_span_past>Close[KS_parameter+1])
+   if(chikou_span_past>senkou_spanA_past && chikou_span_past>senkou_spanB_past && chikou_span_past>kijou_sen_past && chikou_span_past>iClose(NULL,period,KS_parameter+1))
      {
       if(debug) Print("Chikou Span sprzed ",KS_parameter," okresów ponad wszystkimi wskaźnikami. Tendencja wzrostowa. ",Time[1]);
       indicators.CSAboveOthersInPast=true;
      }
 
-   if(chikou_span_past<senkou_spanA_past && chikou_span_past<senkou_spanB_past && chikou_span_past<kijou_sen_past && chikou_span_past<Close[KS_parameter+1])
+   if(chikou_span_past<senkou_spanA_past && chikou_span_past<senkou_spanB_past && chikou_span_past<kijou_sen_past && chikou_span_past<iClose(NULL,period,KS_parameter+1))
      {
       if(debug) Print("Chikou Span sprzed ",KS_parameter," okresów poniżej wszystkich wskaźników. Tendencja spadkowa. ",Time[1]);
       indicators.CSBelowOthersInPast=true;
@@ -245,6 +251,17 @@ Indicators calculateIndicators(ENUM_TIMEFRAMES period=PERIOD_M5)
      {
       if(debug)Print("Chmura spadkowa w przyszłości. Tendencja spadkowa. ",Time[1]);
       indicators.RedCloundInTheFuture=true;
+     }
+   // wskaźniki do ustalenia trendu na H4
+   if(candle_close>senkou_spanA_current && candle_open>senkou_spanA_current && candle_close>senkou_spanB_current && candle_open>senkou_spanB_current && period==PERIOD_H4)
+     {
+     //Print("cena nad kumo", Time[1]);
+     indicators.candleAboveKumo=true;
+     }
+   if(candle_close<senkou_spanA_current && candle_open<senkou_spanA_current && candle_close<senkou_spanB_current && candle_open<senkou_spanB_current && period==PERIOD_H4)
+     {
+     //Print("cena pod kumo",period, Time[1]);
+     indicators.candleBelowKumo=true;
      }
    return indicators;
   }
@@ -283,53 +300,64 @@ void OnTick()
         
       // Indykatory policzone dla M5
       Indicators inds = calculateIndicators(PERIOD_M5);
+      Indicators indsH4 = calculateIndicators(PERIOD_H4);
       
       //
       double stoploss = 0;
       double takeprofit = 0;
-
-      // mechanizm kupowania dla silnej tendencji wzrostowej
-      if(inds.candleUpGreenCloud && inds.candleUpGreenCloud_Up50 && inds.TSAboveKS && inds.CSAboveOthersInPast && inds.PriceAboveTS && inds.GreenCloundInTheFuture && false) // żeby wyłączyć kupowanie zmień 'true' na 'false' w tej lini
-        {
-         Print("Silna tendencja wzrostowa. Kupuj!!! ",Time[1]);
-          
-         stoploss=NormalizeDouble(Bid-500*Point,Digits);
-         takeprofit=NormalizeDouble(Ask+1000*Point,Digits);
-         buy(stoploss, takeprofit);
-        }
-      //---------------------------------------------------
-
-      // mechanizm sprzedawania dla silnej tendencji spadkowej
-      if(inds.candleDownRedCloud && inds.candleDownRedCloud_Down50 && inds.KSAboveTS && inds.CSBelowOthersInPast && inds.PriceBelowTS && inds.RedCloundInTheFuture && true) // żeby wyłączyć sprzedawanie zmien 'true' na 'false' w tej lini
-        {
-        Print("Silna tendencja spadkowa. Sprzedawaj!!! ",Time[1]);
-        
-        stoploss=NormalizeDouble(Ask+500*Point,Digits);
-        takeprofit=NormalizeDouble(Bid-1000*Point,Digits);
-        sell(stoploss, takeprofit);
-        }
-      //---------------------------------------------------
-
-      // mechanizm kupowania dla słabej tendencji wzrostowej
-      if(inds.candleUpRedCloud && inds.candleUpRedCloud_Up50 && inds.TSAboveKS && inds.CSAboveOthersInPast && inds.PriceAboveTS && inds.GreenCloundInTheFuture && false) // żeby wyłączyć kupowanie zmień 'true' na 'false' w tej lini
-        {
-         Print("Słaba tendencja wzrostowa. Kupuj!!! ",Time[1]);
+      double sl = 500;
+      double tp = 900;
+      
+      if (/*indsH4.candleUpGreenCloud || indsH4.candleUpRedCloud ||*/ indsH4.candleAboveKumo)
+         {
+         // mechanizm kupowania dla silnej tendencji wzrostowej
+          if(inds.candleUpGreenCloud && inds.candleUpGreenCloud_Up50 && inds.TSAboveKS && inds.CSAboveOthersInPast && inds.PriceAboveTS && inds.GreenCloundInTheFuture && true) // żeby wyłączyć kupowanie zmień 'true' na 'false' w tej lini
+           {
+            Print("Silna tendencja wzrostowa. Kupuj!!! ",Time[1]);
+             
+            stoploss=NormalizeDouble(Bid-sl*Point,Digits);
+            takeprofit=NormalizeDouble(Ask+tp*Point,Digits);
+            buy(stoploss, takeprofit);
+           }
+         //---------------------------------------------------
          
-         stoploss=NormalizeDouble(Bid-500*Point,Digits);
-         takeprofit=NormalizeDouble(Ask+1000*Point,Digits);
-         buy(stoploss, takeprofit);
-        }
-      //---------------------------------------------------
+         // mechanizm kupowania dla słabej tendencji wzrostowej
+          if(inds.candleUpRedCloud && inds.candleUpRedCloud_Up50 && inds.TSAboveKS && inds.CSAboveOthersInPast && inds.PriceAboveTS && inds.GreenCloundInTheFuture && true) // żeby wyłączyć kupowanie zmień 'true' na 'false' w tej lini
+            {
+             Print("Słaba tendencja wzrostowa. Kupuj!!! ",Time[1]);
+         
+             stoploss=NormalizeDouble(Bid-sl*Point,Digits);
+             takeprofit=NormalizeDouble(Ask+tp*Point,Digits);
+             buy(stoploss, takeprofit);
+            }
+         //---------------------------------------------------
+         }
 
-      // mechanizm sprzedawania dla słabej tendencji spadkowej
-      if(inds.candleDownGreenCloud && inds.candleDownGreenCloud_Down50 && inds.KSAboveTS && inds.CSBelowOthersInPast && inds.PriceBelowTS && inds.RedCloundInTheFuture && true) // żeby wyłączyć sprzedawanie zmien 'true' na 'false' w tej lini
-        {
-         Print("Słaba tendencja spadkowa. Sprzedawaj!!! ",Time[1]);
+      if (/*indsH4.candleDownRedCloud || indsH4.candleDownGreenCloud ||*/ indsH4.candleBelowKumo)
+         {
+         // mechanizm sprzedawania dla silnej tendencji spadkowej
+          if(inds.candleDownRedCloud && inds.candleDownRedCloud_Down50 && inds.KSAboveTS && inds.CSBelowOthersInPast && inds.PriceBelowTS && inds.RedCloundInTheFuture && true) // żeby wyłączyć sprzedawanie zmien 'true' na 'false' w tej lini
+            {
+             Print("Silna tendencja spadkowa. Sprzedawaj!!! ",Time[1]);
         
-         stoploss=NormalizeDouble(Ask+500*Point,Digits);
-         takeprofit=NormalizeDouble(Bid-1000*Point,Digits);
-         sell(stoploss, takeprofit);
-        }
-     }
+             stoploss=NormalizeDouble(Ask+sl*Point,Digits);
+             takeprofit=NormalizeDouble(Bid-tp*Point,Digits);
+             sell(stoploss, takeprofit);
+            }
+         //---------------------------------------------------
+
+
+
+         // mechanizm sprzedawania dla słabej tendencji spadkowej
+          if(inds.candleDownGreenCloud && inds.candleDownGreenCloud_Down50 && inds.KSAboveTS && inds.CSBelowOthersInPast && inds.PriceBelowTS && inds.RedCloundInTheFuture && true) // żeby wyłączyć sprzedawanie zmien 'true' na 'false' w tej lini
+            {
+             Print("Słaba tendencja spadkowa. Sprzedawaj!!! ",Time[1]);
+        
+             stoploss=NormalizeDouble(Ask+sl*Point,Digits);
+             takeprofit=NormalizeDouble(Bid-tp*Point,Digits);
+             sell(stoploss, takeprofit);
+            }
+         }
+      }
   }
 //+------------------------------------------------------------------+
