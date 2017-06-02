@@ -318,6 +318,8 @@ void OnTick()
             stoploss=NormalizeDouble(Bid-sl*Point,Digits);
             takeprofit=NormalizeDouble(Ask+tp*Point,Digits);
             buy(stoploss, takeprofit);
+            Alert("Buy order placed successfully.");
+            PlaySound("Ok.wav");
            }
          //---------------------------------------------------
          
@@ -329,6 +331,8 @@ void OnTick()
              stoploss=NormalizeDouble(Bid-sl*Point,Digits);
              takeprofit=NormalizeDouble(Ask+tp*Point,Digits);
              buy(stoploss, takeprofit);
+             Alert("Buy order placed successfully.");
+             PlaySound("Ok.wav");
             }
          //---------------------------------------------------
          }
@@ -343,6 +347,8 @@ void OnTick()
              stoploss=NormalizeDouble(Ask+sl*Point,Digits);
              takeprofit=NormalizeDouble(Bid-tp*Point,Digits);
              sell(stoploss, takeprofit);
+             Alert("Sell order placed successfully.");
+             PlaySound("Ok.wav");
             }
          //---------------------------------------------------
 
@@ -356,6 +362,8 @@ void OnTick()
              stoploss=NormalizeDouble(Ask+sl*Point,Digits);
              takeprofit=NormalizeDouble(Bid-tp*Point,Digits);
              sell(stoploss, takeprofit);
+             Alert("Sell order placed successfully.");
+             PlaySound("Ok.wav");
             }
          }
       }
