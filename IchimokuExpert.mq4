@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Vitek"
 #property link      "https://www.mql5.com"
-#property version   "1.004"
+#property version   "1.005"
 #property strict
 
 const bool debug=false;
@@ -94,6 +94,9 @@ void sell(double stoploss, double takeprofit)
    else
      {
       Print("OrderSend placed successfully");
+      PlaySound("Alarm.wav");
+      Sleep(20000);
+      Alert("Order placed successfully.");
      }
   }
 //+------------------------------------------------------------------+
@@ -112,6 +115,9 @@ void buy(double stoploss, double takeprofit)
    else
      {
       Print("OrderSend placed successfully");
+      PlaySound("Alarm.wav");
+      Sleep(20000);
+      Alert("Order placed successfully.");
      }
   }
 //+------------------------------------------------------------------+
@@ -300,6 +306,7 @@ void OnTick()
         
       // Indykatory policzone dla M5
       Indicators inds = calculateIndicators(PERIOD_M5);
+      // Indykatory policzone dla H4
       Indicators indsH4 = calculateIndicators(PERIOD_H4);
       
       //
@@ -318,8 +325,6 @@ void OnTick()
             stoploss=NormalizeDouble(Bid-sl*Point,Digits);
             takeprofit=NormalizeDouble(Ask+tp*Point,Digits);
             buy(stoploss, takeprofit);
-            Alert("Buy order placed successfully.");
-            PlaySound("Ok.wav");
            }
          //---------------------------------------------------
          
@@ -331,8 +336,6 @@ void OnTick()
              stoploss=NormalizeDouble(Bid-sl*Point,Digits);
              takeprofit=NormalizeDouble(Ask+tp*Point,Digits);
              buy(stoploss, takeprofit);
-             Alert("Buy order placed successfully.");
-             PlaySound("Ok.wav");
             }
          //---------------------------------------------------
          }
@@ -347,8 +350,6 @@ void OnTick()
              stoploss=NormalizeDouble(Ask+sl*Point,Digits);
              takeprofit=NormalizeDouble(Bid-tp*Point,Digits);
              sell(stoploss, takeprofit);
-             Alert("Sell order placed successfully.");
-             PlaySound("Ok.wav");
             }
          //---------------------------------------------------
 
@@ -362,8 +363,6 @@ void OnTick()
              stoploss=NormalizeDouble(Ask+sl*Point,Digits);
              takeprofit=NormalizeDouble(Bid-tp*Point,Digits);
              sell(stoploss, takeprofit);
-             Alert("Sell order placed successfully.");
-             PlaySound("Ok.wav");
             }
          }
       }
