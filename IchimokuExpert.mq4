@@ -31,7 +31,7 @@ StopLossTakeProfit getStoppLossTakeProfitForCurrency(string symbol)
       // Domyslne wartosci dla pozostalych walut   
       StopLossTakeProfit sltp = {500, 900};
       
-      if (symbol == "EURUSD"){
+      if (symbol == "EURUSD"){ 
          sltp.stopLoss = 500;
          sltp.takeProfit = 900;
       }
@@ -42,6 +42,66 @@ StopLossTakeProfit getStoppLossTakeProfitForCurrency(string symbol)
       }
       
       if (symbol == "EURJPY"){
+         sltp.stopLoss = 500;
+         sltp.takeProfit = 900;
+      }
+      
+      if (symbol == "AUDUSD"){
+         sltp.stopLoss = 500;
+         sltp.takeProfit = 900;
+      }
+      
+      if (symbol == "AUDJPY"){
+         sltp.stopLoss = 500;
+         sltp.takeProfit = 900;
+      }
+      
+      if (symbol == "CADJPY"){
+         sltp.stopLoss = 500;
+         sltp.takeProfit = 900;
+      }
+      
+      if (symbol == "CHFJPY"){
+         sltp.stopLoss = 500;
+         sltp.takeProfit = 900;
+      }
+      
+      if (symbol == "EURAUD"){
+         sltp.stopLoss = 500;
+         sltp.takeProfit = 900;
+      }
+      
+      if (symbol == "EURGBP"){
+         sltp.stopLoss = 500;
+         sltp.takeProfit = 900;
+      }
+      
+      if (symbol == "GBPJPY"){
+         sltp.stopLoss = 500;
+         sltp.takeProfit = 900;
+      }
+      
+      if (symbol == "NZDJPY"){
+         sltp.stopLoss = 500;
+         sltp.takeProfit = 900;
+      }
+      
+      if (symbol == "NZDUSD"){
+         sltp.stopLoss = 500;
+         sltp.takeProfit = 900;
+      }
+      
+      if (symbol == "USDCAD"){
+         sltp.stopLoss = 500;
+         sltp.takeProfit = 900;
+      }
+      
+      if (symbol == "USDCHF"){
+         sltp.stopLoss = 500;
+         sltp.takeProfit = 900;
+      }
+      
+      if (symbol == "GBPUSD"){
          sltp.stopLoss = 500;
          sltp.takeProfit = 900;
       }
@@ -341,14 +401,12 @@ void OnTick()
       Indicators inds = calculateIndicators(PERIOD_M5);
       // Indykatory policzone dla H4
       Indicators indsH4 = calculateIndicators(PERIOD_H4);
-      
+      // Przypisanie SL, TK
       StopLossTakeProfit stopLossTakeProfit = getStoppLossTakeProfitForCurrency(Symbol());
       
       //
       double stoploss = 0;
       double takeprofit = 0;
-      double sl = stopLossTakeProfit.stopLoss;
-      double tp = stopLossTakeProfit.takeProfit;
       
       if (/*indsH4.candleUpGreenCloud || indsH4.candleUpRedCloud ||*/ indsH4.candleAboveKumo)
          {
@@ -357,8 +415,8 @@ void OnTick()
            {
             Print("Silna tendencja wzrostowa. Kupuj!!! ",Time[1]);
              
-            stoploss=NormalizeDouble(Bid-sl*Point,Digits);
-            takeprofit=NormalizeDouble(Ask+tp*Point,Digits);
+            stoploss=NormalizeDouble(Bid-stopLossTakeProfit.stopLoss*Point,Digits);
+            takeprofit=NormalizeDouble(Ask+stopLossTakeProfit.takeProfit*Point,Digits);
             buy(stoploss, takeprofit);
            }
          //---------------------------------------------------
@@ -368,8 +426,8 @@ void OnTick()
             {
              Print("Słaba tendencja wzrostowa. Kupuj!!! ",Time[1]);
          
-             stoploss=NormalizeDouble(Bid-sl*Point,Digits);
-             takeprofit=NormalizeDouble(Ask+tp*Point,Digits);
+             stoploss=NormalizeDouble(Bid-stopLossTakeProfit.stopLoss*Point,Digits);
+             takeprofit=NormalizeDouble(Ask+stopLossTakeProfit.takeProfit*Point,Digits);
              buy(stoploss, takeprofit);
             }
          //---------------------------------------------------
@@ -382,8 +440,8 @@ void OnTick()
             {
              Print("Silna tendencja spadkowa. Sprzedawaj!!! ",Time[1]);
         
-             stoploss=NormalizeDouble(Ask+sl*Point,Digits);
-             takeprofit=NormalizeDouble(Bid-tp*Point,Digits);
+             stoploss=NormalizeDouble(Ask+stopLossTakeProfit.stopLoss*Point,Digits);
+             takeprofit=NormalizeDouble(Bid-stopLossTakeProfit.takeProfit*Point,Digits);
              sell(stoploss, takeprofit);
             }
          //---------------------------------------------------
@@ -395,8 +453,8 @@ void OnTick()
             {
              Print("Słaba tendencja spadkowa. Sprzedawaj!!! ",Time[1]);
         
-             stoploss=NormalizeDouble(Ask+sl*Point,Digits);
-             takeprofit=NormalizeDouble(Bid-tp*Point,Digits);
+             stoploss=NormalizeDouble(Ask+stopLossTakeProfit.stopLoss*Point,Digits);
+             takeprofit=NormalizeDouble(Bid-stopLossTakeProfit.takeProfit*Point,Digits);
              sell(stoploss, takeprofit);
             }
          }
