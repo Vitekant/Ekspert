@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Vitek"
 #property link      "https://www.mql5.com"
-#property version   "1.005"
+#property version   "1.006"
 #property strict
 
 const bool debug=false;
@@ -16,6 +16,39 @@ const bool print_result=false;
 const int TS_parameter = 7;
 const int KS_parameter = 28;
 const int SSB_parameter= 119;
+//----------------------------------------
+
+// Ustawienie StopLoss i TakeProfit dla konkretnych walut
+
+struct StopLossTakeProfit
+   {
+      double stopLoss;
+      double takeProfit;
+   };
+
+StopLossTakeProfit getStoppLossTakeProfitForCurrency(string symbol)
+  {
+      // Domyslne wartosci dla pozostalych walut   
+      StopLossTakeProfit sltp = {500, 900};
+      
+      if (symbol == "EURUSD"){
+         sltp.stopLoss = 500;
+         sltp.takeProfit = 900;
+      }
+      
+      if (symbol == "USDJPY"){
+         sltp.stopLoss = 500;
+         sltp.takeProfit = 900;
+      }
+      
+      if (symbol == "EURJPY"){
+         sltp.stopLoss = 500;
+         sltp.takeProfit = 900;
+      }
+      
+      return sltp;
+  };
+  
 //----------------------------------------
 
 //+------------------------------------------------------------------+
@@ -309,11 +342,13 @@ void OnTick()
       // Indykatory policzone dla H4
       Indicators indsH4 = calculateIndicators(PERIOD_H4);
       
+      StopLossTakeProfit stopLossTakeProfit = getStoppLossTakeProfitForCurrency(Symbol());
+      
       //
       double stoploss = 0;
       double takeprofit = 0;
-      double sl = 500;
-      double tp = 900;
+      double sl = stopLossTakeProfit.stopLoss;
+      double tp = stopLossTakeProfit.takeProfit;
       
       if (/*indsH4.candleUpGreenCloud || indsH4.candleUpRedCloud ||*/ indsH4.candleAboveKumo)
          {
