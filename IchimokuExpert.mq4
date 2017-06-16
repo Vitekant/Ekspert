@@ -29,7 +29,7 @@ struct StopLossTakeProfit
 StopLossTakeProfit getStoppLossTakeProfitForCurrency(string symbol)
   {
       // Domyslne wartosci dla pozostalych walut   
-      StopLossTakeProfit sltp = {500, 900};
+      StopLossTakeProfit sltp = {500, 1000};
       
       if (symbol == "EURUSD"){ 
          sltp.stopLoss = 500;
