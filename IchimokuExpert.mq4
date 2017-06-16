@@ -397,8 +397,8 @@ void OnTick()
          return;
         }
         
-      // Indykatory policzone dla M5
-      Indicators inds = calculateIndicators(PERIOD_M5);
+      // Indykatory policzone dla biezacego okresu na wykresie
+      Indicators inds = calculateIndicators(PERIOD_CURRENT);
       // Indykatory policzone dla H4
       Indicators indsH4 = calculateIndicators(PERIOD_H4);
       // Przypisanie SL, TK
